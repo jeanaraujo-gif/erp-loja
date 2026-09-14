@@ -1,0 +1,45 @@
+{
+  "name": "erp-loja",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "db:validate": "prisma validate",
+    "db:generate": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
+    "test": "npm run tools:build && node --test .tools/tests/*.test.js tests/database.test.mjs",
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1",
+    "start:hosted": "node scripts/start-hosted.mjs",
+    "typecheck": "tsc --noEmit",
+    "admin:create": "npm run tools:build && node --env-file=.env .tools/scripts/create-admin.js",
+    "tools:build": "tsc -p tsconfig.tools.json",
+    "test:browser": "npm run tools:build && npm run build && node tests/browser.mjs",
+    "test:stock:postgres": "npm run tools:build && node tests/stock-postgres.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "@tailwindcss/postcss": "4.3.3",
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "tailwindcss": "4.3.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.5.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "pglite-server": "0.1.5",
+    "prisma": "6.19.3",
+    "typescript": "7.0.2",
+    "pg": "8.23.0"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.0"
+  }
+}

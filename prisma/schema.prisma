@@ -1,0 +1,571 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StockKind {
+  ENTRY
+  SALE
+  RETURN
+  ADJUSTMENT
+  LOSS
+  DAMAGE
+  TRANSFER
+}
+
+enum SaleStatus {
+  OPEN
+  FINALIZED
+  CANCELLED
+  PARTIALLY_RETURNED
+  RETURNED
+}
+
+enum Direction {
+  IN
+  OUT
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  DEBIT_CARD
+  CREDIT_CARD
+}
+
+enum CashKind {
+  SALE
+  RECEIPT
+  EXPENSE
+  MANUAL
+  WITHDRAWAL
+  REVERSAL
+}
+
+model Role {
+  id                  String           @id @default(uuid()) @db.Uuid
+  code                String           @unique
+  name                String
+  User_role           User[]           @relation("User_role")
+  RolePermission_role RolePermission[] @relation("RolePermission_role")
+
+  @@map("roles")
+}
+
+model Permission {
+  id                        String           @id @default(uuid()) @db.Uuid
+  code                      String           @unique
+  description               String
+  RolePermission_permission RolePermission[] @relation("RolePermission_permission")
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(uuid()) @db.Uuid
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation("RolePermission_role", fields: [roleId], references: [id], onDelete: Restrict)
+  permission   Permission @relation("RolePermission_permission", fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  mustChangePassword         Boolean                @default(false)
+  id                         String                 @id @default(uuid()) @db.Uuid
+  name                       String
+  email                      String                 @unique
+  passwordHash               String
+  active                     Boolean                @default(true)
+  createdAt                  DateTime               @default(now()) @db.Timestamptz(3)
+  roleId                     String                 @db.Uuid
+  role                       Role                   @relation("User_role", fields: [roleId], references: [id], onDelete: Restrict)
+  Session_user               Session[]              @relation("Session_user")
+  StockMovement_actor        StockMovement[]        @relation("StockMovement_actor")
+  Sale_seller                Sale[]                 @relation("Sale_seller")
+  SaleReturn_actor           SaleReturn[]           @relation("SaleReturn_actor")
+  CreditOverride_approver    CreditOverride[]       @relation("CreditOverride_approver")
+  Payable_actor              Payable[]              @relation("Payable_actor")
+  Payment_actor              Payment[]              @relation("Payment_actor")
+  ReceivableAdjustment_actor ReceivableAdjustment[] @relation("ReceivableAdjustment_actor")
+  CashSession_openedBy       CashSession[]          @relation("CashSession_openedBy")
+  CashSession_closedBy       CashSession[]          @relation("CashSession_closedBy")
+  CashMovement_actor         CashMovement[]         @relation("CashMovement_actor")
+  AuditLog_actor             AuditLog[]             @relation("AuditLog_actor")
+
+  @@index([roleId])
+  @@map("users")
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  userId    String    @db.Uuid
+  user      User      @relation("Session_user", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([expiresAt], map: "sessions_expiration")
+  @@map("sessions")
+}
+
+model LoginThrottle {
+  key String @id
+  attempts Int @default(1)
+  windowStart DateTime @default(now()) @db.Timestamptz(3)
+  @@map("login_throttles")
+}
+
+model Customer {
+    version             Int          @default(1)
+    updatedAt           DateTime     @default(now()) @db.Timestamptz(3)
+  id                  String       @id @default(uuid()) @db.Uuid
+  name                String
+  tradeName           String?
+  cpf                 String?      @unique
+  cnpj                String?      @unique
+  rg                  String?
+  phone               String?
+  whatsapp            String?
+  email               String?
+  postalCode          String?
+  street              String?
+  number              String?
+  neighborhood        String?
+  city                String?
+  state               String?      @db.Char(2)
+  birthDate           DateTime?    @db.Date
+  notes               String?
+  active              Boolean      @default(true)
+  creditLimit         Decimal      @default(0) @db.Decimal(18, 2)
+  createdAt           DateTime     @default(now()) @db.Timestamptz(3)
+  Sale_customer       Sale[]       @relation("Sale_customer")
+  Receivable_customer Receivable[] @relation("Receivable_customer")
+
+  @@index([name])
+  @@map("customers")
+}
+
+model Supplier {
+  id                       String            @id @default(uuid()) @db.Uuid
+  legalName                String
+  tradeName                String?
+  cnpj                     String?           @unique
+  phone                    String?
+  whatsapp                 String?
+  email                    String?
+  address                  String?
+  contact                  String?
+  notes                    String?
+  active                   Boolean           @default(true)
+  ProductSupplier_supplier ProductSupplier[] @relation("ProductSupplier_supplier")
+  Payable_supplier         Payable[]         @relation("Payable_supplier")
+
+  @@map("suppliers")
+}
+
+model Category {
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @default(now()) @db.Timestamptz(3)
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String    @unique
+  active           Boolean   @default(true)
+  Product_category Product[] @relation("Product_category")
+
+  @@map("categories")
+}
+
+model Product {
+  version                 Int               @default(1)
+  createdAt               DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime          @default(now()) @db.Timestamptz(3)
+  id                      String            @id @default(uuid()) @db.Uuid
+  code                    String            @unique
+  barcode                 String?           @unique
+  sku                     String?           @unique
+  name                    String
+  description             String?
+  brand                   String?
+  unit                    String            @default("UN")
+  cost                    Decimal           @db.Decimal(18, 2)
+  price                   Decimal           @db.Decimal(18, 2)
+  minimum                 Decimal           @default(0) @db.Decimal(18, 3)
+  maximum                 Decimal?          @db.Decimal(18, 3)
+  location                String?
+  photoUrl                String?
+  active                  Boolean           @default(true)
+  categoryId              String?           @db.Uuid
+  category                Category?         @relation("Product_category", fields: [categoryId], references: [id], onDelete: Restrict)
+  ProductSupplier_product ProductSupplier[] @relation("ProductSupplier_product")
+  StockMovement_product   StockMovement[]   @relation("StockMovement_product")
+  SaleItem_product        SaleItem[]        @relation("SaleItem_product")
+
+  @@index([name])
+  @@index([categoryId])
+  @@map("products")
+}
+
+model ProductSupplier {
+  id           String   @id @default(uuid()) @db.Uuid
+  supplierCode String?
+  productId    String   @db.Uuid
+  supplierId   String   @db.Uuid
+  product      Product  @relation("ProductSupplier_product", fields: [productId], references: [id], onDelete: Restrict)
+  supplier     Supplier @relation("ProductSupplier_supplier", fields: [supplierId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, supplierId])
+  @@index([productId])
+  @@index([supplierId])
+  @@map("product_suppliers")
+}
+
+model Warehouse {
+  sales Sale[]
+  id                      String          @id @default(uuid()) @db.Uuid
+  name                    String          @unique
+  active                  Boolean         @default(true)
+  StockMovement_warehouse StockMovement[] @relation("StockMovement_warehouse")
+
+  @@map("warehouses")
+}
+
+model StockMovement {
+  sequence     BigInt @unique @default(autoincrement())
+  requestHash  String?
+  productName  String?
+  productCode  String?
+  unit         String?
+  reversesId   String? @unique @db.Uuid
+  reverses     StockMovement? @relation("StockReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversedBy   StockMovement? @relation("StockReversal")
+  id           String      @id @default(uuid()) @db.Uuid
+  kind         StockKind
+  quantity     Decimal     @db.Decimal(18, 3)
+  before       Decimal     @db.Decimal(18, 3)
+  after        Decimal     @db.Decimal(18, 3)
+  notes        String
+  operationKey String      @unique
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+  productId    String      @db.Uuid
+  warehouseId  String      @db.Uuid
+  actorId      String      @db.Uuid
+  saleItemId   String?     @db.Uuid
+  returnItemId String?     @db.Uuid
+  product      Product     @relation("StockMovement_product", fields: [productId], references: [id], onDelete: Restrict)
+  warehouse    Warehouse   @relation("StockMovement_warehouse", fields: [warehouseId], references: [id], onDelete: Restrict)
+  actor        User        @relation("StockMovement_actor", fields: [actorId], references: [id], onDelete: Restrict)
+  saleItem     SaleItem?   @relation("StockMovement_saleItem", fields: [saleItemId], references: [id], onDelete: Restrict)
+  returnItem   ReturnItem? @relation("StockMovement_returnItem", fields: [returnItemId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt])
+  @@index([productId])
+  @@index([warehouseId])
+  @@index([actorId])
+  @@index([saleItemId])
+  @@index([returnItemId])
+  @@map("stock_movements")
+}
+
+model Sale {
+  warehouseId String? @db.Uuid
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  requestHash String?
+  finalizeKey String? @unique
+  finalizeHash String?
+  cancelKey String? @unique
+  cancelHash String?
+  cancelReason String?
+  cancelledAt DateTime? @db.Timestamptz(3)
+  discountReason String?
+  id                  String          @id @default(uuid()) @db.Uuid
+  number              Int             @unique @default(autoincrement())
+  status              SaleStatus      @default(OPEN)
+  subtotal            Decimal         @db.Decimal(18, 2)
+  discount            Decimal         @default(0) @db.Decimal(18, 2)
+  total               Decimal         @db.Decimal(18, 2)
+  operationKey        String          @unique
+  createdAt           DateTime        @default(now()) @db.Timestamptz(3)
+  finalizedAt         DateTime?       @db.Timestamptz(3)
+  customerId          String?         @db.Uuid
+  sellerId            String          @db.Uuid
+  customer            Customer?       @relation("Sale_customer", fields: [customerId], references: [id], onDelete: Restrict)
+  seller              User            @relation("Sale_seller", fields: [sellerId], references: [id], onDelete: Restrict)
+  SaleItem_sale       SaleItem[]      @relation("SaleItem_sale")
+  SaleReturn_sale     SaleReturn[]    @relation("SaleReturn_sale")
+  CreditOverride_sale CreditOverride? @relation("CreditOverride_sale")
+  Receivable_sale     Receivable[]    @relation("Receivable_sale")
+  Payment_sale        Payment[]       @relation("Payment_sale")
+
+  @@index([createdAt, status])
+  @@index([customerId])
+  @@index([sellerId])
+  @@map("sales")
+}
+
+model SaleItem {
+  productCode String?
+  unit String?
+  id                     String          @id @default(uuid()) @db.Uuid
+  description            String
+  quantity               Decimal         @db.Decimal(18, 3)
+  unitPrice              Decimal         @db.Decimal(18, 2)
+  unitCost               Decimal         @db.Decimal(18, 2)
+  discount               Decimal         @default(0) @db.Decimal(18, 2)
+  total                  Decimal         @db.Decimal(18, 2)
+  saleId                 String          @db.Uuid
+  productId              String          @db.Uuid
+  StockMovement_saleItem StockMovement[] @relation("StockMovement_saleItem")
+  sale                   Sale            @relation("SaleItem_sale", fields: [saleId], references: [id], onDelete: Restrict)
+  product                Product         @relation("SaleItem_product", fields: [productId], references: [id], onDelete: Restrict)
+  ReturnItem_saleItem    ReturnItem[]    @relation("ReturnItem_saleItem")
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
+}
+
+model SaleReturn {
+  id                              String                 @id @default(uuid()) @db.Uuid
+  reason                          String
+  operationKey                    String                 @unique
+  createdAt                       DateTime               @default(now()) @db.Timestamptz(3)
+  saleId                          String                 @db.Uuid
+  actorId                         String                 @db.Uuid
+  sale                            Sale                   @relation("SaleReturn_sale", fields: [saleId], references: [id], onDelete: Restrict)
+  actor                           User                   @relation("SaleReturn_actor", fields: [actorId], references: [id], onDelete: Restrict)
+  ReturnItem_saleReturn           ReturnItem[]           @relation("ReturnItem_saleReturn")
+  ReceivableAdjustment_saleReturn ReceivableAdjustment[] @relation("ReceivableAdjustment_saleReturn")
+
+  @@index([saleId])
+  @@index([actorId])
+  @@map("sale_returns")
+}
+
+model ReturnItem {
+  id                       String          @id @default(uuid()) @db.Uuid
+  quantity                 Decimal         @db.Decimal(18, 3)
+  amount                   Decimal         @db.Decimal(18, 2)
+  saleReturnId             String          @db.Uuid
+  saleItemId               String          @db.Uuid
+  StockMovement_returnItem StockMovement[] @relation("StockMovement_returnItem")
+  saleReturn               SaleReturn      @relation("ReturnItem_saleReturn", fields: [saleReturnId], references: [id], onDelete: Restrict)
+  saleItem                 SaleItem        @relation("ReturnItem_saleItem", fields: [saleItemId], references: [id], onDelete: Restrict)
+
+  @@index([saleReturnId])
+  @@index([saleItemId])
+  @@map("return_items")
+}
+
+model CreditOverride {
+  id              String   @id @default(uuid()) @db.Uuid
+  availableBefore Decimal  @db.Decimal(18, 2)
+  requestedAmount Decimal  @db.Decimal(18, 2)
+  reason          String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  saleId          String   @unique @db.Uuid
+  approverId      String   @db.Uuid
+  sale            Sale     @relation("CreditOverride_sale", fields: [saleId], references: [id], onDelete: Restrict)
+  approver        User     @relation("CreditOverride_approver", fields: [approverId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([approverId])
+  @@map("credit_overrides")
+}
+
+model Receivable {
+  id                              String                 @id @default(uuid()) @db.Uuid
+  installment                     Int
+  amount                          Decimal                @db.Decimal(18, 2)
+  dueDate                         DateTime               @db.Date
+  createdAt                       DateTime               @default(now()) @db.Timestamptz(3)
+  saleId                          String                 @db.Uuid
+  customerId                      String                 @db.Uuid
+  sale                            Sale                   @relation("Receivable_sale", fields: [saleId], references: [id], onDelete: Restrict)
+  customer                        Customer               @relation("Receivable_customer", fields: [customerId], references: [id], onDelete: Restrict)
+  ReceivableAllocation_receivable ReceivableAllocation[] @relation("ReceivableAllocation_receivable")
+  ReceivableAdjustment_receivable ReceivableAdjustment[] @relation("ReceivableAdjustment_receivable")
+
+  @@unique([saleId, installment])
+  @@index([saleId])
+  @@index([customerId])
+  @@map("accounts_receivable")
+}
+
+model Payable {
+  id                        String              @id @default(uuid()) @db.Uuid
+  description               String
+  category                  String
+  amount                    Decimal             @db.Decimal(18, 2)
+  dueDate                   DateTime            @db.Date
+  notes                     String?
+  createdAt                 DateTime            @default(now()) @db.Timestamptz(3)
+  supplierId                String?             @db.Uuid
+  actorId                   String              @db.Uuid
+  supplier                  Supplier?           @relation("Payable_supplier", fields: [supplierId], references: [id], onDelete: Restrict)
+  actor                     User                @relation("Payable_actor", fields: [actorId], references: [id], onDelete: Restrict)
+  PayableAllocation_payable PayableAllocation[] @relation("PayableAllocation_payable")
+
+  @@index([supplierId])
+  @@index([actorId])
+  @@map("accounts_payable")
+}
+
+model Payment {
+  id                           String                 @id @default(uuid()) @db.Uuid
+  direction                    Direction
+  method                       PaymentMethod
+  amount                       Decimal                @db.Decimal(18, 2)
+  operationKey                 String                 @unique
+  notes                        String?
+  createdAt                    DateTime               @default(now()) @db.Timestamptz(3)
+  saleId                       String?                @db.Uuid
+  actorId                      String                 @db.Uuid
+  reversesId                   String?                @unique @db.Uuid
+  sale                         Sale?                  @relation("Payment_sale", fields: [saleId], references: [id], onDelete: Restrict)
+  actor                        User                   @relation("Payment_actor", fields: [actorId], references: [id], onDelete: Restrict)
+  reverses                     Payment?               @relation("Payment_reverses", fields: [reversesId], references: [id], onDelete: Restrict)
+  Payment_reverses             Payment?               @relation("Payment_reverses")
+  ReceivableAllocation_payment ReceivableAllocation[] @relation("ReceivableAllocation_payment")
+  PayableAllocation_payment    PayableAllocation[]    @relation("PayableAllocation_payment")
+  CashMovement_payment         CashMovement?          @relation("CashMovement_payment")
+
+  @@index([saleId])
+  @@index([actorId])
+  @@index([reversesId])
+  @@map("payments")
+}
+
+model ReceivableAllocation {
+  id           String     @id @default(uuid()) @db.Uuid
+  amount       Decimal    @db.Decimal(18, 2)
+  receivableId String     @db.Uuid
+  paymentId    String     @db.Uuid
+  receivable   Receivable @relation("ReceivableAllocation_receivable", fields: [receivableId], references: [id], onDelete: Restrict)
+  payment      Payment    @relation("ReceivableAllocation_payment", fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([receivableId, paymentId])
+  @@index([receivableId])
+  @@index([paymentId])
+  @@map("receivable_allocations")
+}
+
+model PayableAllocation {
+  id        String  @id @default(uuid()) @db.Uuid
+  amount    Decimal @db.Decimal(18, 2)
+  payableId String  @db.Uuid
+  paymentId String  @db.Uuid
+  payable   Payable @relation("PayableAllocation_payable", fields: [payableId], references: [id], onDelete: Restrict)
+  payment   Payment @relation("PayableAllocation_payment", fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([payableId, paymentId])
+  @@index([payableId])
+  @@index([paymentId])
+  @@map("payable_allocations")
+}
+
+model ReceivableAdjustment {
+  id           String     @id @default(uuid()) @db.Uuid
+  amount       Decimal    @db.Decimal(18, 2)
+  reason       String
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  receivableId String     @db.Uuid
+  saleReturnId String     @db.Uuid
+  actorId      String     @db.Uuid
+  receivable   Receivable @relation("ReceivableAdjustment_receivable", fields: [receivableId], references: [id], onDelete: Restrict)
+  saleReturn   SaleReturn @relation("ReceivableAdjustment_saleReturn", fields: [saleReturnId], references: [id], onDelete: Restrict)
+  actor        User       @relation("ReceivableAdjustment_actor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([receivableId])
+  @@index([saleReturnId])
+  @@index([actorId])
+  @@map("receivable_adjustments")
+}
+
+model CashRegister {
+  id                   String        @id @default(uuid()) @db.Uuid
+  name                 String        @unique
+  active               Boolean       @default(true)
+  CashSession_register CashSession[] @relation("CashSession_register")
+
+  @@map("cash_registers")
+}
+
+model CashSession {
+  operationKey String? @unique
+  requestHash String?
+  closeKey String? @unique
+  closeHash String?
+  id                   String         @id @default(uuid()) @db.Uuid
+  openingBalance       Decimal        @db.Decimal(18, 2)
+  openedAt             DateTime       @default(now()) @db.Timestamptz(3)
+  closedAt             DateTime?      @db.Timestamptz(3)
+  countedBalance       Decimal?       @db.Decimal(18, 2)
+  expectedBalance      Decimal?       @db.Decimal(18, 2)
+  registerId           String         @db.Uuid
+  openedById           String         @db.Uuid
+  closedById           String?        @db.Uuid
+  register             CashRegister   @relation("CashSession_register", fields: [registerId], references: [id], onDelete: Restrict)
+  openedBy             User           @relation("CashSession_openedBy", fields: [openedById], references: [id], onDelete: Restrict)
+  closedBy             User?          @relation("CashSession_closedBy", fields: [closedById], references: [id], onDelete: Restrict)
+  CashMovement_session CashMovement[] @relation("CashMovement_session")
+
+  @@index([registerId])
+  @@index([openedById])
+  @@index([closedById])
+  @@map("cash_sessions")
+}
+
+model CashMovement {
+  id                    String        @id @default(uuid()) @db.Uuid
+  direction             Direction
+  kind                  CashKind
+  method                PaymentMethod
+  amount                Decimal       @db.Decimal(18, 2)
+  reason                String
+  operationKey          String        @unique
+  createdAt             DateTime      @default(now()) @db.Timestamptz(3)
+  sessionId             String        @db.Uuid
+  paymentId             String?       @unique @db.Uuid
+  actorId               String        @db.Uuid
+  reversesId            String?       @unique @db.Uuid
+  session               CashSession   @relation("CashMovement_session", fields: [sessionId], references: [id], onDelete: Restrict)
+  payment               Payment?      @relation("CashMovement_payment", fields: [paymentId], references: [id], onDelete: Restrict)
+  actor                 User          @relation("CashMovement_actor", fields: [actorId], references: [id], onDelete: Restrict)
+  reverses              CashMovement? @relation("CashMovement_reverses", fields: [reversesId], references: [id], onDelete: Restrict)
+  CashMovement_reverses CashMovement? @relation("CashMovement_reverses")
+
+  @@index([sessionId])
+  @@index([paymentId])
+  @@index([actorId])
+  @@index([reversesId])
+  @@map("cash_movements")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  operation String
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  reason    String?
+  requestId String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  actorId   String   @db.Uuid
+  actor     User     @relation("AuditLog_actor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entity, entityId, createdAt])
+  @@index([actorId])
+  @@map("audit_logs")
+}

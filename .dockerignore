@@ -1,0 +1,13 @@
+node_modules
+.next
+.tools
+.git
+.env
+.env.*
+!.env.example
+work
+test-results
+docs/telas.html
+*.zip
+*.log
+*.tsbuildinfo

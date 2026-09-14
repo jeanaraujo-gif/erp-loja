@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": ".tools",
+    "rootDir": "."
+  },
+  "include": [
+    "scripts/create-admin.ts",
+    "tests/auth.test.ts",
+    "src/modules/auth/service.ts",
+    "src/modules/auth/security.ts",
+    "src/modules/auth/validation.ts",
+    "src/modules/auth/database.ts",
+    "tests/catalog.test.ts",
+    "tests/stock.test.ts", "tests/customers.test.ts", "tests/sales.test.ts"
+  ]
+}

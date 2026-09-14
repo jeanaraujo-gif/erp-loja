@@ -1,0 +1,4 @@
+import { LoginForm } from '../../components/forms';
+export default function LoginPage() {
+ return <main className="login-page"><section className="login-story"><a className="brand" href="/">L<span>loja</span></a><div><p className="eyebrow">GESTÃO QUE ACOMPANHA VOCÊ</p><h1>Seu dia começa<br/>com tudo em ordem.</h1><p>Um lugar para cuidar da sua loja.<br/>Mais clareza para cada decisão.</p><div className="story-line"/><span className="story-caption">SIMPLES NO BALCÃO. COMPLETO NA GESTÃO.</span></div><small>ERP para loja</small></section><section className="login-panel"><div className="login-card"><span className="pill">ÁREA DA EQUIPE</span><h2>Bom ter você por aqui.</h2><p className="muted">Entre com sua conta para continuar.</p><LoginForm/><p className="help">Precisa de acesso? Peça ao administrador da loja.</p></div><small className="login-footer">Seu acesso é pessoal. Não compartilhe sua senha.</small></section></main>;
+}
