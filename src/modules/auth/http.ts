@@ -4,7 +4,7 @@ import { AuthError, assertOrigin } from './security';
 import { SESSION_SECONDS } from './service';
 
 export function configuration() {
- const raw = process.env.APP_ORIGIN;
+ const raw = process.env.APP_ORIGIN || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
  if (!raw) throw new Error('Configure APP_ORIGIN.');
  const url = new URL(raw);
  if (url.origin !== raw || !['http:','https:'].includes(url.protocol)) throw new Error('APP_ORIGIN deve conter somente a origem.');

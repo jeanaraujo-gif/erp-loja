@@ -47,9 +47,20 @@ function matchLoopback(a: string | null, b: string) {
   }
 }
 
+function matchVercel(a: string | null, b: string) {
+  if (!a) return false;
+  try {
+    const ua = new URL(a);
+    const ub = new URL(b);
+    return ua.protocol === 'https:' && ub.protocol === 'https:' && ua.hostname.endsWith('.vercel.app') && ub.hostname.endsWith('.vercel.app');
+  } catch {
+    return false;
+  }
+}
+
 export function assertOrigin(request: Request, origin: string) {
   const reqOrigin = request.headers.get('origin');
-  const valid = reqOrigin === origin || matchLoopback(reqOrigin, origin);
+  const valid = reqOrigin === origin || matchLoopback(reqOrigin, origin) || matchVercel(reqOrigin, origin);
   if (!valid || request.headers.get('sec-fetch-site') === 'cross-site')
     throw new AuthError(403, 'Origem da solicitação não permitida. Recarregue a página.');
   if (!request.headers.get('content-type')?.startsWith('application/json'))
