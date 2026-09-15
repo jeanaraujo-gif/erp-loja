@@ -8,7 +8,7 @@
     "db:deploy": "prisma migrate deploy",
     "test": "npm run tools:build && node --test .tools/tests/*.test.js tests/database.test.mjs",
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "next build --webpack",
+    "build": "prisma generate && next build --webpack",
     "start": "next start --hostname 127.0.0.1",
     "start:hosted": "node scripts/start-hosted.mjs",
     "typecheck": "tsc --noEmit",
