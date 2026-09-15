@@ -26,8 +26,31 @@ export async function verifyPassword(password: string, stored: string) {
   const key = await derive(password, valid ? Buffer.from(parts[1], 'hex') : Buffer.alloc(16));
   return valid && timingSafeEqual(key, Buffer.from(parts[2], 'hex'));
 }
+function isLoopback(u: string | null) {
+  if (!u) return false;
+  try {
+    const host = new URL(u).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  } catch {
+    return false;
+  }
+}
+
+function matchLoopback(a: string | null, b: string) {
+  if (!a || !isLoopback(a) || !isLoopback(b)) return false;
+  try {
+    const ua = new URL(a);
+    const ub = new URL(b);
+    return ua.protocol === ub.protocol && ua.port === ub.port;
+  } catch {
+    return false;
+  }
+}
+
 export function assertOrigin(request: Request, origin: string) {
-  if (request.headers.get('origin') !== origin || request.headers.get('sec-fetch-site') === 'cross-site')
+  const reqOrigin = request.headers.get('origin');
+  const valid = reqOrigin === origin || matchLoopback(reqOrigin, origin);
+  if (!valid || request.headers.get('sec-fetch-site') === 'cross-site')
     throw new AuthError(403, 'Origem da solicitação não permitida. Recarregue a página.');
   if (!request.headers.get('content-type')?.startsWith('application/json'))
     throw new AuthError(415, 'Envie os dados em JSON.');
