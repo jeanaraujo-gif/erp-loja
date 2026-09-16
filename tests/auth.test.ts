@@ -8,9 +8,20 @@ import type { Database } from '../src/modules/auth/database';
 import { AuthError, assertOrigin, digest, hashPassword, verifyPassword } from '../src/modules/auth/security';
 import { NextRequest, NextResponse } from 'next/server';
 import { body, configuration, setSession } from '../src/modules/auth/http';
+import { passwordSchema } from '../src/modules/auth/validation';
 
 const password='Uma frase de teste 2026!';
 const rejected=(status:number)=> (error:unknown)=>error instanceof AuthError && error.status===status;
+
+test('validação de senha exige 8 caracteres, maiúscula, minúscula, número e especial',()=>{
+ assert.throws(()=>passwordSchema.parse('Ab1!xyz'), /8 caracteres/);
+ assert.throws(()=>passwordSchema.parse('ABCDEF1!'), /minúscula/);
+ assert.throws(()=>passwordSchema.parse('abcdef1!'), /maiúscula/);
+ assert.throws(()=>passwordSchema.parse('Abcdefg!'), /número/);
+ assert.throws(()=>passwordSchema.parse('Abcdefg1'), /especial/);
+ assert.equal(passwordSchema.parse('Abcdef1!'), 'Abcdef1!');
+ assert.equal(passwordSchema.parse('Uma frase de teste 2026!'), 'Uma frase de teste 2026!');
+});
 
 test('hash usa sal aleatório e rejeita senha incorreta e hash inválido',async()=>{
  const a=await hashPassword(password),b=await hashPassword(password);

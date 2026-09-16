@@ -84,7 +84,7 @@ test('vendas à vista, caixa e estorno integral',async t=>{
  });
  await t.test('vendedor só prepara as próprias vendas; caixa finaliza sem acesso aos custos',async()=>{
  const tokens:Record<string,string>={};
- for(const roleCode of ['SELLER','CASHIER']){const email=roleCode+'@example.invalid';await auth.createUser(token,{name:roleCode,email,password,roleCode});let user=(await auth.login({email,password})).token;await auth.changePassword(user,{currentPassword:password,password:'Nova senha pessoal de vendas!'});tokens[roleCode]=(await auth.login({email,password:'Nova senha pessoal de vendas!'})).token;}
+ for(const roleCode of ['SELLER','CASHIER']){const email=roleCode+'@example.invalid';await auth.createUser(token,{name:roleCode,email,password,roleCode});let user=(await auth.login({email,password})).token;await auth.changePassword(user,{currentPassword:password,password:'Nova senha pessoal de vendas 2026!'});tokens[roleCode]=(await auth.login({email,password:'Nova senha pessoal de vendas 2026!'})).token;}
  const seller=tokens.SELLER,cashier=tokens.CASHIER;
  const id=(await sales.create(seller,draft())).id;assert.equal((await sales.list(seller,{})).total,1);
  await assert.rejects(sales.get(seller,saleId),rejected(403));

@@ -60,7 +60,7 @@ test('clientes: cadastro, permissões, auditoria e histórico',async t=>{
  await assert.rejects(service.list(undefined,{}),rejected(401));
  for(const roleCode of ['SELLER','CASHIER']){
  const email=roleCode.toLowerCase()+'@example.invalid';await auth.createUser(token,{name:roleCode,email,password,roleCode});let user=(await auth.login({email,password})).token;
- await auth.changePassword(user,{currentPassword:password,password:'Outra senha pessoal de testes!'});user=(await auth.login({email,password:'Outra senha pessoal de testes!'})).token;
+ await auth.changePassword(user,{currentPassword:password,password:'Outra senha pessoal de testes 2026!'});user=(await auth.login({email,password:'Outra senha pessoal de testes 2026!'})).token;
  await assert.rejects(service.save(user,{name:'Negado'}),rejected(403));
  if(roleCode==='SELLER'){assert.equal((await service.get(user,customer.id)).id,customer.id);await service.summary(user,customer.id);await service.history(user,customer.id,{});}
  else{await assert.rejects(service.list(user,{}),rejected(403));await assert.rejects(service.history(user,customer.id,{}),rejected(403));}

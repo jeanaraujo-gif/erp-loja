@@ -80,7 +80,7 @@ test('movimentações, estornos e limites com todas as migrações',async t=>{
    await send({warehouseId:other,quantity:'3'});assert.equal((await catalog.get(token,product.id)).stock,'29.000');
    await assert.rejects(stock.list(undefined,{warehouseId}),rejected(401));
    await auth.createUser(token,{name:'Vendedor',email:'seller@example.invalid',password,roleCode:'SELLER'});let seller=(await auth.login({email:'seller@example.invalid',password})).token;
-   await auth.changePassword(seller,{currentPassword:password,password:'Nova senha pessoal forte!'});seller=(await auth.login({email:'seller@example.invalid',password:'Nova senha pessoal forte!'})).token;
+   await auth.changePassword(seller,{currentPassword:password,password:'Nova senha pessoal forte 2026!'});seller=(await auth.login({email:'seller@example.invalid',password:'Nova senha pessoal forte 2026!'})).token;
    await assert.rejects(stock.list(seller,{warehouseId}),rejected(403));await assert.rejects(stock.create(seller,base),rejected(403));
   });
  }finally{await pg.close();}
