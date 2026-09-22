@@ -32,6 +32,10 @@ test('pedidos do site: acesso, faturamento atômico, reenvio e cancelamento',asy
   async function order(quantity=2){const id=randomUUID();await db.query(`INSERT INTO store_orders(id,items,subtotal,total,"customerId") VALUES ($1::uuid,$2::jsonb,$3::numeric,$3::numeric,$4::uuid)`,[id,JSON.stringify([{id:1,name:'Óleo de massagem',price:69.9,quantity}]),(69.9*quantity).toFixed(2),customerId]);return id;}
   const data=(quantity=2)=>({warehouseId,expectedTotal:(69.9*quantity).toFixed(2),mappings:[{index:0,productId:product.id,expectedPrice:'69.90'}],payment:{operationKey:randomUUID(),sessionId,payments:[{method:'PIX',amount:(69.9*quantity).toFixed(2)}]}});
   await t.test('pedido existente aparece ao vendedor; sessão de cliente não concede acesso',async()=>{await order();assert.equal((await orders.list(seller,{})).total,1);await assert.rejects(orders.list(undefined,{}),denied(401));await assert.rejects(orders.list('x'.repeat(43),{}),denied(401));});
+  await t.test('Data API sem política não expõe pedidos',async()=>{
+   await pg.exec('CREATE ROLE orders_public_test; GRANT SELECT ON store_orders TO orders_public_test; SET ROLE orders_public_test;');
+   try{const [{n}]=await db.query<{n:number}>('SELECT count(*)::int n FROM store_orders');assert.equal(n,0);}finally{await pg.exec('RESET ROLE;');}
+  });
   await t.test('faturamento do vendedor registra cliente, venda, caixa e baixa uma única vez',async()=>{
    const id=await order(),input=data();const first=await orders.invoice(seller,id,input);
    assert.equal((await orders.invoice(token,id,data())).saleId,first.saleId);

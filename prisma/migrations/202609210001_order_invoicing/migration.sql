@@ -12,3 +12,5 @@ INSERT INTO role_permissions(id,"roleId","permissionId")
  SELECT md5(r.code || ':orders.invoice')::uuid,r.id,p.id
  FROM roles r CROSS JOIN permissions p
  WHERE r.code IN ('ADMIN','MANAGER','SELLER') AND p.code='orders.invoice';
+-- Only server-side PostgreSQL connections may access orders; no public Data API policies.
+ALTER TABLE store_orders ENABLE ROW LEVEL SECURITY;
