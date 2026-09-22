@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 enum StockKind {
@@ -127,6 +127,7 @@ model LoginThrottle {
 }
 
 model Customer {
+  storeAccount        StoreAccount?
     version             Int          @default(1)
     updatedAt           DateTime     @default(now()) @db.Timestamptz(3)
   id                  String       @id @default(uuid()) @db.Uuid
@@ -151,9 +152,48 @@ model Customer {
   createdAt           DateTime     @default(now()) @db.Timestamptz(3)
   Sale_customer       Sale[]       @relation("Sale_customer")
   Receivable_customer Receivable[] @relation("Receivable_customer")
+  StoreOrder_customer StoreOrder[] @relation("StoreOrder_customer")
 
   @@index([name])
   @@map("customers")
+}
+
+model StoreAccount {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  passwordHash String?
+  customerId String @unique @db.Uuid
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  verifiedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  sessions StoreSession[]
+  @@map("store_accounts")
+}
+
+model StoreChallenge {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  codeHash String
+  attempts Int @default(0)
+  expiresAt DateTime @db.Timestamptz(3)
+  sentAt DateTime? @db.Timestamptz(3)
+  usedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([expiresAt], map: "store_challenges_expiration")
+  @@map("store_challenges")
+}
+
+model StoreSession {
+  id String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique
+  accountId String @db.Uuid
+  account StoreAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  expiresAt DateTime @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([accountId], map: "store_sessions_account")
+  @@index([expiresAt], map: "store_sessions_expiration")
+  @@map("store_sessions")
 }
 
 model Supplier {
@@ -278,6 +318,7 @@ model StockMovement {
 }
 
 model Sale {
+  storeOrder StoreOrder?
   warehouseId String? @db.Uuid
   warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   requestHash String?
@@ -568,4 +609,35 @@ model AuditLog {
   @@index([entity, entityId, createdAt])
   @@index([actorId])
   @@map("audit_logs")
+}
+
+enum StoreOrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model StoreOrder {
+  saleId String? @unique @db.Uuid
+  sale Sale? @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  invoicedAt DateTime? @db.Timestamptz(3)
+  cancelReason String?
+  operationKey String? @db.Uuid
+  requestHash String?
+  @@unique([customerId, operationKey], map: "store_orders_checkout_key")
+  @@index([status, createdAt(sort: Desc), id], map: "store_orders_queue")
+  id         String           @id @default(uuid()) @db.Uuid
+  number     Int              @unique @default(autoincrement())
+  items      Json
+  subtotal   Decimal          @db.Decimal(18, 2)
+  total      Decimal          @db.Decimal(18, 2)
+  status     StoreOrderStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
+  customerId String           @db.Uuid
+  customer   Customer         @relation("StoreOrder_customer", fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("store_orders")
 }

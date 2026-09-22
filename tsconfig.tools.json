@@ -20,6 +20,6 @@
     "src/modules/auth/validation.ts",
     "src/modules/auth/database.ts",
     "tests/catalog.test.ts",
-    "tests/stock.test.ts", "tests/customers.test.ts", "tests/sales.test.ts"
+    "tests/stock.test.ts", "tests/customers.test.ts", "tests/sales.test.ts", "tests/orders.test.ts"
   ]
 }

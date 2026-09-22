@@ -101,7 +101,7 @@ test('autenticação e permissões com migrações reais',async t=>{
   });
   await t.test('perfis recebem exatamente as permissões previstas',async()=>{
    const grants=await db.query<{role:string;code:string}>(`SELECT r.code AS role,p.code FROM roles r JOIN role_permissions rp ON rp."roleId"=r.id JOIN permissions p ON p.id=rp."permissionId"`);
-   assert.deepEqual(grants.filter(g=>g.role==='SELLER').map(g=>g.code).sort(),['customers.read','products.read','sales.create']);
+   assert.deepEqual(grants.filter(g=>g.role==='SELLER').map(g=>g.code).sort(),['customers.read','orders.invoice','products.read','sales.create']);
    assert.deepEqual(grants.filter(g=>g.role==='CASHIER').map(g=>g.code).sort(),['cash.manage','receipts.create','sales.finalize']);
    assert.equal(grants.some(g=>g.role==='MANAGER'&&g.code==='users.manage'),false);
    assert.equal(grants.some(g=>g.role==='MANAGER'&&g.code==='credit.override'),true);

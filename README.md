@@ -64,3 +64,7 @@ Etapa 6 implementada, com 50 testes locais e fluxo no navegador aprovados. A exe
 Clientes: consulte docs/clientes.md. A migração 202609140006_customers acrescenta versão e data de atualização do cadastro.
 
 Vendas à vista e caixa básico: consulte docs/vendas.md. Migração 202609140007_sales. Concorrência nativa de vendas também pendente.
+
+## Pedidos do site
+
+A aba PEDIDOS integra o checkout Minerva ao faturamento interno. Consulte [operação e implantação coordenada](docs/pedidos.md). Aplicar a migração compartilhada antes de publicar esta versão.

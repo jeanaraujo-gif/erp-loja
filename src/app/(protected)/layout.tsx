@@ -13,6 +13,9 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         </Link>
         <p className="nav-label">ESPAÇO DE TRABALHO</p>
         <nav>
+          {actor.permissions.includes('orders.invoice') && !actor.mustChangePassword && (
+            <Link href="/pedidos"><span aria-hidden="true">▣</span><span>PEDIDOS</span></Link>
+          )}
           <Link href="/">
             <span aria-hidden="true">⌂</span>
             <span>Início</span>
