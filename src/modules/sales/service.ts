@@ -23,9 +23,9 @@ export function salesService(db:Database){
  async function read(tx:Database,id:string){const [sale]=await tx.query<Sale>(`SELECT ${columns} FROM sales s JOIN users u ON u.id=s."sellerId" LEFT JOIN customers c ON c.id=s."customerId" LEFT JOIN warehouses w ON w.id=s."warehouseId" WHERE s.id=$1::uuid`,[id]);if(!sale)throw new AuthError(404,'Venda não encontrada.');return sale;}
  function access(a:Actor,s:Sale){if(!a.permissions.includes('sales.finalize')&&s.sellerId!==a.id)throw new AuthError(403,'Você pode consultar apenas suas vendas.');}
  async function items(tx:Database,id:string){return tx.query<Item>(`SELECT id,"productId",description,"productCode",unit,quantity::text,"unitPrice"::text,"unitCost"::text,discount::text,total::text FROM sale_items WHERE "saleId"=$1::uuid ORDER BY "productId"`,[id]);}
- async function session(tx:Database,id:string,a:Actor,allowClosed=false,orderInvoice=false){
+ async function session(tx:Database,id:string,a:Actor,allowClosed=false){
   const [s]=await tx.query<Session>(`SELECT id,"registerId","openedById","openingBalance"::text,"closedAt"::text,"closeKey","closeHash","requestHash" FROM cash_sessions WHERE id=$1::uuid FOR UPDATE`,[id]);
-  if(!s)throw new AuthError(404,'Sessão de caixa não encontrada.');if(!orderInvoice&&!manager(a)&&s.openedById!==a.id)throw new AuthError(403,'Utilize seu próprio caixa.');
+  if(!s)throw new AuthError(404,'Sessão de caixa não encontrada.');if(!manager(a)&&s.openedById!==a.id)throw new AuthError(403,'Utilize seu próprio caixa.');
   if(s.closedAt&&!allowClosed)fail('O caixa está fechado.');return s;
  }
  async function expected(tx:Database,s:Session){const [r]=await tx.query<{net:string}>(`SELECT coalesce(sum(CASE WHEN direction='IN' THEN amount ELSE -amount END),0)::numeric(20,2)::text net FROM cash_movements WHERE "sessionId"=$1::uuid AND method='CASH'`,[s.id]);return cents(s.openingBalance)+cents(r.net);}
@@ -69,15 +69,8 @@ export function salesService(db:Database){
   }
   await audit(tx,a,'SALE_CREATED',id,null,{subtotal:fixed(subtotal),discount:data.discount,total:fixed(subtotal-discount),sellerId,customerId:data.customerId,items:prepared.map(l=>({productId:l.product.id,quantity:l.quantity,price:l.product.price}))},data.discountReason);return {id,replayed:false};
  });},
- async finalize(token:string|undefined,id:string,input:unknown,orderId?:string){z.uuid().parse(id);
-  async function authorize(tx:Database){
-   if(!orderId)return actor(tx,token,'sales.finalize');
-   z.uuid().parse(orderId);const a=await actor(tx,token,'orders.invoice');
-   const [linked]=await tx.query(`SELECT o.id FROM store_orders o JOIN sales s ON s.id=o."saleId" WHERE o.id=$1::uuid AND o."saleId"=$2::uuid AND o.status='PENDING' AND s."sellerId"=$3::uuid`,[orderId,id,a.id]);
-   if(!linked)throw new AuthError(403,'Pedido não vinculado a esta venda.');return a;
-  }
-  await authorize(db);const data=finalizeSchema.parse(input);return atomic(async tx=>{
-  const a=await authorize(tx);await tx.query('SELECT id FROM sales WHERE id=$1::uuid FOR UPDATE',[id]);const sale=await read(tx,id),signature=hash({actor:a.id,...data,payments:[...data.payments].sort((x,y)=>x.method.localeCompare(y.method))});
+ async finalize(token:string|undefined,id:string,input:unknown){await actor(db,token,'sales.finalize');z.uuid().parse(id);const data=finalizeSchema.parse(input);return atomic(async tx=>{
+  const a=await actor(tx,token,'sales.finalize');await tx.query('SELECT id FROM sales WHERE id=$1::uuid FOR UPDATE',[id]);const sale=await read(tx,id),signature=hash({actor:a.id,...data,payments:[...data.payments].sort((x,y)=>x.method.localeCompare(y.method))});
   if(sale.finalizeKey===data.operationKey){if(sale.finalizeHash!==signature)fail('Chave reutilizada com dados diferentes.');return {id,replayed:true};}
   if(sale.status!=='OPEN'||!sale.requestHash||!sale.warehouseId)fail('Esta venda não está aberta para finalização.');
   if(data.payments.some(p=>cents(p.amount)<=0n)||data.payments.reduce((s,p)=>s+cents(p.amount),0n)!==cents(sale.total))throw new AuthError(400,'Os pagamentos devem somar exatamente o total. Fiado ainda não está disponível.');
@@ -88,7 +81,7 @@ export function salesService(db:Database){
    const before=await stock(tx,line.productId,sale.warehouseId),after=before-units(line.quantity);if(after<0n)fail('Estoque insuficiente para '+line.description+'.');
    await tx.query(`INSERT INTO stock_movements(id,kind,quantity,"before","after",notes,"operationKey","productId","warehouseId","actorId","saleItemId","productName","productCode",unit) VALUES ($1::uuid,'SALE',$2::numeric,$3::numeric,$4::numeric,$5,$6,$7::uuid,$8::uuid,$9::uuid,$10::uuid,$11,$12,$13) RETURNING id`,[randomUUID(),quantityText(-units(line.quantity)),quantityText(before),quantityText(after),'Venda #'+sale.number,'sale-stock:'+id+':'+line.id,line.productId,sale.warehouseId,a.id,line.id,line.description,line.productCode,line.unit]);
   }
-  await session(tx,data.sessionId,a,false,!!orderId);
+  await session(tx,data.sessionId,a);
   if(lines.reduce((sum,l)=>sum+cents(l.total),0n)!==cents(sale.total))fail('Totais da venda inconsistentes.');
   for(const p of data.payments)await payment(tx,a,id,data.sessionId,p.method,p.amount,'sale-payment:'+id+':'+p.method);
   await tx.query(`UPDATE sales SET status='FINALIZED',"finalizedAt"=now(),"finalizeKey"=$2,"finalizeHash"=$3 WHERE id=$1::uuid RETURNING id`,[id,data.operationKey,signature]);
