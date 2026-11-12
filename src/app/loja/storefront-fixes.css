@@ -1,0 +1,11 @@
+.store-product-body > p {
+  height: 60px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.store-product-bottom {
+  margin-top: 18px;
+}

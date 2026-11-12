@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { storefrontCatalog } from '../../lib/storefront';
 import { Storefront } from './storefront';
 import './storefront.css';
+import './storefront-fixes.css';
 
 export const dynamic = 'force-dynamic';
 
